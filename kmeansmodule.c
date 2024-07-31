@@ -20,13 +20,13 @@ struct vector
     struct cord *cords;
 };
 
-void sum_clusters_reset(double **sum_clusters, int num_clusters, int vector_length)
+void sum_clusters_reset(double **sum_clusters, int num_clusters, int n_features)
 {
     int i;
     int j;
     for (i = 0; i < num_clusters; i++)
     {
-        for (j = 0; j < vector_length; j++)
+        for (j = 0; j < n_features; j++)
         {
             sum_clusters[i][j] = 0;
         }
@@ -56,14 +56,14 @@ int have_centroids_changed(double *delta_centroids, double eps, int num_clusters
     return 0;
 }
 
-double euclidean_distance(double *cord1, double *cord2, int vector_length)
+double euclidean_distance(double *cord1, double *cord2, int n_features)
 {
     double sum = 0;
     int i;
     double sqrt_sum;
     double distance;
     double squared_cord_distance;
-    for (i = 0; i < vector_length; i++)
+    for (i = 0; i < n_features; i++)
     {
         distance = cord1[i] - cord2[i];
         squared_cord_distance = pow(distance, 2);
@@ -73,9 +73,9 @@ double euclidean_distance(double *cord1, double *cord2, int vector_length)
     return sqrt_sum;
 }
 
-int find_closest_centroid(struct cord *curr_cord, double **centroids, int num_clusters, int vector_length)
+int find_closest_centroid(struct cord *curr_cord, double **centroids, int num_clusters, int n_features)
 {
-    double *curr_cord_array = malloc(vector_length * sizeof(double));
+    double *curr_cord_array = malloc(n_features * sizeof(double));
     int cord_index = 0;
     double min_index;
     double min_distance;
@@ -87,11 +87,11 @@ int find_closest_centroid(struct cord *curr_cord, double **centroids, int num_cl
         curr_cord = curr_cord->next;
         cord_index++;
     }
-    min_distance = euclidean_distance(curr_cord_array, centroids[0], vector_length);
+    min_distance = euclidean_distance(curr_cord_array, centroids[0], n_features);
     min_index = 0;
     for (i = 1; i < num_clusters; i++)
     {
-        double current_distance = euclidean_distance(curr_cord_array, centroids[i], vector_length);
+        double current_distance = euclidean_distance(curr_cord_array, centroids[i], n_features);
         if (current_distance < min_distance)
         {
             min_distance = current_distance;
@@ -122,7 +122,13 @@ static PyObject *fit(PyObject *self, PyObject *args)
     }
 
     centroids = (double **)malloc(num_clusters * sizeof(double *));
-    for (i = 0; i < k; i++)
+    if (centroids == NULL)
+    {
+        printf("Memory allocation failed\n");
+        return NULL;
+    }
+
+    for (i = 0; i < num_clusters; i++)
     {
         numpy_centroid = PyList_GetItem(numpy_centroids, i);
         centroids[i] = (double *)malloc(n_features * sizeof(double));
@@ -136,7 +142,7 @@ static PyObject *fit(PyObject *self, PyObject *args)
             printf("An Error Has Occurred\n");
             return NULL;
         }
-        for (j = 0; j < d; j++)
+        for (j = 0; j < n_features; j++)
         {
             item = PyList_GetItem(numpy_centroid, j);
             cordValue = PyFloat_AsDouble(item);
@@ -145,23 +151,21 @@ static PyObject *fit(PyObject *self, PyObject *args)
     }
 
     // implemntation of K-means clustering here
-    int i;
-    int j;
     double **sum_clusters;
     int *counters;
     double delta;
-    int num_clusters;
-    int vector_length;
     int curr_iter;
     struct vector *head_vec, *curr_vec, *next_vec;
     struct cord *head_cord, *curr_cord, *next_cord;
-    double n;
-    char c;
     double *delta_centroids;
 
     head_vec = malloc(sizeof(struct vector));
     curr_vec = head_vec;
     curr_vec->next = NULL;
+
+    head_cord = malloc(sizeof(struct cord));
+    curr_cord = head_cord;
+    curr_cord->next = NULL;
 
     for (i = 0; i < n_samples; i++)
     {
@@ -189,10 +193,22 @@ static PyObject *fit(PyObject *self, PyObject *args)
     sum_clusters = malloc(num_clusters * sizeof(double *));
     counters = malloc(num_clusters * sizeof(int));
 
+    if (counters == NULL)
+    {
+        for (int i = 0; i < num_clusters; i++)
+        {
+            free(centroids[i]);
+        }
+        free(centroids);
+        free(sum_clusters);
+        printf("Memory allocation failed\n");
+        return NULL;
+    }
+
     for (i = 0; i < num_clusters; i++)
     {
-        sum_clusters[i] = malloc(vector_length * sizeof(double));
-        for (j = 0; j < vector_length; j++)
+        sum_clusters[i] = malloc(n_features * sizeof(double));
+        for (j = 0; j < n_features; j++)
         {
             sum_clusters[i][j] = 0;
         }
@@ -207,9 +223,9 @@ static PyObject *fit(PyObject *self, PyObject *args)
         delta_centroids[i] = INFINITY;
     }
 
-    while (curr_iter < num_iterations && have_centroids_changed(delta_centroids, eps, num_clusters))
+    while (curr_iter < iter && have_centroids_changed(delta_centroids, eps, num_clusters))
     {
-        sum_clusters_reset(sum_clusters, num_clusters, vector_length);
+        sum_clusters_reset(sum_clusters, num_clusters, n_features);
         counters_reset(counters, num_clusters);
 
         curr_vec = head_vec;
@@ -217,9 +233,9 @@ static PyObject *fit(PyObject *self, PyObject *args)
         {
             struct cord *curr_cord = curr_vec->cords;
 
-            int closest_centroid = find_closest_centroid(curr_cord, centroids, num_clusters, vector_length);
+            int closest_centroid = find_closest_centroid(curr_cord, centroids, num_clusters, n_features);
 
-            for (j = 0; j < vector_length; j++)
+            for (j = 0; j < n_features; j++)
             {
                 sum_clusters[closest_centroid][j] += curr_cord->value;
                 curr_cord = curr_cord->next;
@@ -230,17 +246,17 @@ static PyObject *fit(PyObject *self, PyObject *args)
 
         for (i = 0; i < num_clusters; i++)
         {
-            double *temp_centroid = malloc(vector_length * sizeof(double));
-            for (j = 0; j < vector_length; j++)
+            double *temp_centroid = malloc(n_features * sizeof(double));
+            for (j = 0; j < n_features; j++)
             {
                 temp_centroid[j] = centroids[i][j];
             }
 
-            for (j = 0; j < vector_length; j++)
+            for (j = 0; j < n_features; j++)
             {
                 centroids[i][j] = sum_clusters[i][j] / counters[i];
             }
-            delta = euclidean_distance(temp_centroid, centroids[i], vector_length);
+            delta = euclidean_distance(temp_centroid, centroids[i], n_features);
             delta_centroids[i] = delta;
             free(temp_centroid);
         }
@@ -248,17 +264,16 @@ static PyObject *fit(PyObject *self, PyObject *args)
         curr_iter++;
     }
 
-    PyObject *py_centroids = PyList_New(k);
-    for (i = 0; i < k; i++)
+    PyObject *py_centroids = PyList_New(num_clusters);
+    for (i = 0; i < num_clusters; i++)
     {
-        PyObject *py_centroid = PyList_New(d);
-        for (j = 0; j < d; j++)
+        PyObject *py_centroid = PyList_New(n_features);
+        for (j = 0; j < n_features; j++)
         {
             PyList_SetItem(py_centroid, j, PyFloat_FromDouble(centroids[i][j]));
         }
         PyList_SetItem(py_centroids, i, py_centroid);
     }
-    returned_py_val = Py_BuildValue("O", py_centroids);
 
     for (i = 0; i < num_clusters; i++)
     {
@@ -289,7 +304,7 @@ static PyObject *fit(PyObject *self, PyObject *args)
     free(counters);
     free(delta_centroids);
 
-    return Py_BuildValue("O", returned_py_val);
+    return Py_BuildValue("O", py_centroids);
 }
 
 static PyMethodDef Kmeans_FuncTable[] = {
