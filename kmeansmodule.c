@@ -110,7 +110,6 @@ static PyObject *fit(PyObject *self, PyObject *args)
     PyObject *item;
     PyObject *numpy_centroids;
     PyObject *numpy_centroid;
-    PyObject *returned_py_val;
     double **centroids;
     double eps, cordValue;
     int num_clusters, iter, n_samples, n_features;
