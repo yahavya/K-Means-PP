@@ -15,7 +15,7 @@ def find_nearest_centroid(data_point, centroids):
             nearest_centroid = centroid
     return nearest_centroid
 
-def kmeans_pp(K, iter, file_name_1, file_name_2):
+def kmeans_pp(K, file_name_1, file_name_2, iter, eps):
     # Choose one center uniformly at random from among the data points
     file_1 = pd.read_csv(file_name_1, header=None)
     file_2 = pd.read_csv(file_name_2, header=None)
@@ -124,7 +124,7 @@ def main():
         print("Invalid epsilon!")
         sys.exit(1)
 
-    kmeans_pp(K, input_text_1, input_text_2, iter)
+    kmeans_pp(k, input_text_1, input_text_2, iter, eps)
 
 if __name__ == "__main__":
     main()
