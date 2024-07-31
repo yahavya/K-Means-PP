@@ -107,11 +107,12 @@ static PyObject *fit(PyObject *self, PyObject *args)
 
     PyObject *datapoints;
     PyObject *datapoint;
+    PyObject *item;
     PyObject *numpy_centroids;
-    PyObject *centroid;
+    PyObject *numpy_centroid;
     PyObject *returned_py_val;
     double **centroids;
-    double eps;
+    double eps, cordValue;
     int num_clusters, iter, n_samples, n_features;
     int i, j;
 
@@ -120,11 +121,11 @@ static PyObject *fit(PyObject *self, PyObject *args)
         return NULL;
     }
 
-    centroids = (double **)malloc(k * sizeof(double *));
+    centroids = (double **)malloc(num_clusters * sizeof(double *));
     for (i = 0; i < k; i++)
     {
-        numpy_centroids = PyList_GetItem(numpy_centroids, i);
-        centroids[i] = (double *)malloc(d * sizeof(double));
+        numpy_centroid = PyList_GetItem(numpy_centroids, i);
+        centroids[i] = (double *)malloc(n_features * sizeof(double));
         if (centroids[i] == NULL)
         {
             for (j = 0; j < i; j++)
@@ -137,9 +138,9 @@ static PyObject *fit(PyObject *self, PyObject *args)
         }
         for (j = 0; j < d; j++)
         {
-            item = PyList_GetItem(center, j);
-            entry = PyFloat_AsDouble(item);
-            centroids[i][j] = entry;
+            item = PyList_GetItem(numpy_centroid, j);
+            cordValue = PyFloat_AsDouble(item);
+            centroids[i][j] = cordValue;
         }
     }
 
@@ -175,8 +176,8 @@ static PyObject *fit(PyObject *self, PyObject *args)
         for (j = 0; j < n_features; j++) /*iterating over a single vector's coords*/
         {
             item = PyList_GetItem(datapoint, j);
-            cord = PyFloat_AsDouble(item);
-            curr_cord->value = cord;
+            cordValue = PyFloat_AsDouble(item);
+            curr_cord->value = cordValue;
             curr_cord->next = malloc(sizeof(struct cord));
             curr_cord = curr_cord->next;
             curr_cord->next = NULL;
