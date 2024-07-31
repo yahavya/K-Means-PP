@@ -6,15 +6,13 @@ import mykmeanssp as kmc
 np.random.seed(1234)
 
 
-def find_nearest_centroid(data_point, centroids):
+def min_distance_from_centroids(data_point, centroids):
     min_distance = float("inf")
-    nearest_centroid = None
     for centroid in centroids:
         distance = np.linalg.norm(data_point - centroid)
         if distance < min_distance:
             min_distance = distance
-            nearest_centroid = centroid
-    return nearest_centroid
+    return min_distance
 
 
 def kmeans_pp(K, file_name_1, file_name_2, iter, eps):
@@ -47,7 +45,7 @@ def kmeans_pp(K, file_name_1, file_name_2, iter, eps):
         distances = []
         for data_point in numpy_data_points:
             if not np.any(np.all(data_point == centroids, axis=1)):
-                min_distance = find_nearest_centroid(data_point, centroids)
+                min_distance = min_distance_from_centroids(data_point, centroids)
                 distances.append(min_distance)
             else:
                 distances.append(0)
