@@ -159,10 +159,23 @@ static PyObject *fit(PyObject *self, PyObject *args)
     double *delta_centroids;
 
     head_vec = malloc(sizeof(struct vector));
+    if (head_vec == NULL)
+    {
+        printf("Memory allocation failed\n");
+        return NULL;
+    }
+    curr_vec = head_vec;
+    curr_vec->next = NULL;
     curr_vec = head_vec;
     curr_vec->next = NULL;
 
     head_cord = malloc(sizeof(struct cord));
+    if (head_cord == NULL)
+    {
+        free(head_vec);
+        printf("Memory allocation failed\n");
+        return NULL;
+    }
     curr_cord = head_cord;
     curr_cord->next = NULL;
 
@@ -190,15 +203,29 @@ static PyObject *fit(PyObject *self, PyObject *args)
     curr_vec->next = NULL;
 
     sum_clusters = malloc(num_clusters * sizeof(double *));
-    counters = malloc(num_clusters * sizeof(int));
-
-    if (counters == NULL)
+    if (sum_clusters == NULL)
     {
-        for (int i = 0; i < num_clusters; i++)
+        for (i = 0; i < num_clusters; i++)
         {
             free(centroids[i]);
         }
         free(centroids);
+        printf("Memory allocation failed\n");
+        return NULL;
+    }
+    counters = malloc(num_clusters * sizeof(int));
+
+    if (counters == NULL)
+    {
+        for (i = 0; i < num_clusters; i++)
+        {
+            free(centroids[i]);
+        }
+        free(centroids);
+        for (i = 0; i < num_clusters; i++)
+        {
+            free(sum_clusters[i]);
+        }
         free(sum_clusters);
         printf("Memory allocation failed\n");
         return NULL;
@@ -216,6 +243,23 @@ static PyObject *fit(PyObject *self, PyObject *args)
     curr_iter = 0;
 
     delta_centroids = malloc(num_clusters * sizeof(double));
+
+    if (delta_centroids == NULL)
+    {
+        for (i = 0; i < num_clusters; i++)
+        {
+            free(centroids[i]);
+        }
+        free(centroids);
+        for (i = 0; i < num_clusters; i++)
+        {
+            free(sum_clusters[i]);
+        }
+        free(sum_clusters);
+        free(counters);
+        printf("Memory allocation failed\n");
+        return NULL;
+    }
 
     for (i = 0; i < num_clusters; i++)
     {
@@ -278,6 +322,7 @@ static PyObject *fit(PyObject *self, PyObject *args)
     {
         free(centroids[i]);
     }
+
     free(centroids);
 
     curr_vec = head_vec;
@@ -300,7 +345,12 @@ static PyObject *fit(PyObject *self, PyObject *args)
         free(sum_clusters[i]);
     }
     free(sum_clusters);
-    free(counters);
+
+    for (i = 0; i < num_clusters; i++)
+    {
+        free(centroids[i]);
+    }
+    free(centroids);
     free(delta_centroids);
 
     return Py_BuildValue("O", py_centroids);
