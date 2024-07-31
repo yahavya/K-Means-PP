@@ -1,9 +1,10 @@
 import sys
 import pandas as pd
 import numpy as np
-import kmeans
+import mykmeanssp as kmc
 
 np.random.seed(1234)
+
 
 def find_nearest_centroid(data_point, centroids):
     min_distance = float("inf")
@@ -15,25 +16,26 @@ def find_nearest_centroid(data_point, centroids):
             nearest_centroid = centroid
     return nearest_centroid
 
+
 def kmeans_pp(K, file_name_1, file_name_2, iter, eps):
     # Choose one center uniformly at random from among the data points
     file_1 = pd.read_csv(file_name_1, header=None)
     file_2 = pd.read_csv(file_name_2, header=None)
 
-    file_1.columns = ['key'] + [f'col_{i}' for i in range(1, len(file_1.columns))]
-    file_2.columns = ['key'] + [f'col_{i}' for i in range(1, len(file_2.columns))]
-    
+    file_1.columns = ["key"] + [f"col_{i}" for i in range(1, len(file_1.columns))]
+    file_2.columns = ["key"] + [f"col_{i}" for i in range(1, len(file_2.columns))]
+
     # Inner join the two files, based on key column
-    merged_file = pd.merge(file_1, file_2, on='key', how='inner')
-    
+    merged_file = pd.merge(file_1, file_2, on="key", how="inner")
+
     # Sort the merged file by the key column in ascending order
-    merged_file = merged_file.sort_values(by='key')
+    merged_file = merged_file.sort_values(by="key")
 
     # Convert the merged file to a numpy array
     numpy_data_points = merged_file.to_numpy()
 
     # remove first element from each data points, which is the key, as it is not needed for clustering
-    numpy_data_points = numpy_data_points[:, 1:] 
+    numpy_data_points = numpy_data_points[:, 1:]
 
     n_samples = len(numpy_data_points)
     n_features = len(numpy_data_points[0])
@@ -57,8 +59,16 @@ def kmeans_pp(K, file_name_1, file_name_2, iter, eps):
     centroids = np.array(centroids)
     centroid_indexes = []
 
-    # Run k-means clustering with the chosen initial centers    
-    kmeans.fit(centroids.tolist(), numpy_data_points.tolist(), eps, K, iter, n_samples, n_features)
+    # Run k-means clustering with the chosen initial centers
+    kmc.fit(
+        centroids.tolist(),
+        numpy_data_points.tolist(),
+        eps,
+        K,
+        iter,
+        n_samples,
+        n_features,
+    )
 
     # Find the index of the centroids in the numpy_data_points array
     for centroid in centroids:
@@ -66,16 +76,18 @@ def kmeans_pp(K, file_name_1, file_name_2, iter, eps):
         centroid_indexes.append(index[0][0])
 
     # Print first the index of the centroids
-    print(','.join(f'{index}' for index in centroid_indexes))
+    print(",".join(f"{index}" for index in centroid_indexes))
 
     for centroid in centroids:
         # Print the elements of each centroids
-        print(','.join('{:4f}'.format(element_of_centroid) for element_of_centroid in centroid))
-
-
-    
+        print(
+            ",".join(
+                "{:4f}".format(element_of_centroid) for element_of_centroid in centroid
+            )
+        )
 
     # Now that we have chosen the initial centers, proceed using standard k-means clustering
+
 
 def main():
 
@@ -125,6 +137,7 @@ def main():
         sys.exit(1)
 
     kmeans_pp(k, input_text_1, input_text_2, iter, eps)
+
 
 if __name__ == "__main__":
     main()

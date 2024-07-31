@@ -107,7 +107,7 @@ static PyObject *fit(PyObject *self, PyObject *args)
 
     PyObject *datapoints;
     PyObject *datapoint;
-    PyObject *centroids;
+    PyObject *numpy_centroids;
     PyObject *centroid;
     PyObject *returned_py_val;
     double **centroids;
@@ -115,9 +115,32 @@ static PyObject *fit(PyObject *self, PyObject *args)
     int num_clusters, iter, n_samples, n_features;
     int i, j;
 
-    if (!PyArg_ParseTuple(args, "OOdiiii", &centroids, &datapoints, &eps, &num_clusters, &iter, &n_samples, &n_features))
+    if (!PyArg_ParseTuple(args, "OOdiiii", &numpy_centroids, &datapoints, &eps, &num_clusters, &iter, &n_samples, &n_features))
     {
         return NULL;
+    }
+
+    centroids = (double **)malloc(k * sizeof(double *));
+    for (i = 0; i < k; i++)
+    {
+        numpy_centroids = PyList_GetItem(numpy_centroids, i);
+        centroids[i] = (double *)malloc(d * sizeof(double));
+        if (centroids[i] == NULL)
+        {
+            for (j = 0; j < i; j++)
+            {
+                free(centroids[j]);
+            }
+            free(centroids);
+            printf("An Error Has Occurred\n");
+            return NULL;
+        }
+        for (j = 0; j < d; j++)
+        {
+            item = PyList_GetItem(center, j);
+            entry = PyFloat_AsDouble(item);
+            centroids[i][j] = entry;
+        }
     }
 
     // implemntation of K-means clustering here
@@ -135,7 +158,32 @@ static PyObject *fit(PyObject *self, PyObject *args)
     char c;
     double *delta_centroids;
 
+    head_vec = malloc(sizeof(struct vector));
     curr_vec = head_vec;
+    curr_vec->next = NULL;
+
+    for (i = 0; i < n_samples; i++)
+    {
+        curr_vec->cords = head_cord;
+        curr_vec->next = malloc(sizeof(struct vector));
+        head_cord = malloc(sizeof(struct cord));
+        curr_cord = head_cord;
+        curr_cord->next = NULL;
+
+        datapoint = PyList_GetItem(datapoints, i);
+
+        for (j = 0; j < n_features; j++) /*iterating over a single vector's coords*/
+        {
+            item = PyList_GetItem(datapoint, j);
+            cord = PyFloat_AsDouble(item);
+            curr_cord->value = cord;
+            curr_cord->next = malloc(sizeof(struct cord));
+            curr_cord = curr_cord->next;
+            curr_cord->next = NULL;
+        }
+        curr_vec = curr_vec->next;
+    }
+    curr_vec->next = NULL;
 
     sum_clusters = malloc(num_clusters * sizeof(double *));
     counters = malloc(num_clusters * sizeof(int));
